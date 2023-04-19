@@ -1,9 +1,1 @@
-data/t0/
-data/t1/
-data/t2/
-data/t3/
-data/train/
-data/test/
-pre_weight/*
-data/train.txt
-data/test.txt
+!.gitignore
