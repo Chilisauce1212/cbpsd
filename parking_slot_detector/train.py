@@ -31,13 +31,13 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
     val_img_cnt = len(open(val_file, 'r').readlines())
 
     if fine_tune:
-        batch_size = 64
+        batch_size = 8
         learning_rate_init = 1e-5
         restore_include = None
         restore_exclude = None
         update_part = ['yolov3/yolov3_head']
     else:
-        batch_size = 20
+        batch_size = 8
         learning_rate_init = 1e-4
         pw_boundaries = [6., 8.]  # epoch based boundaries
         pw_values = [learning_rate_init, 3e-5, 1e-5]
@@ -45,10 +45,10 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
         restore_exclude = ['yolov3/yolov3_head/Conv_14', 'yolov3/yolov3_head/Conv_6', 'yolov3/yolov3_head/Conv_22']
         update_part = None
 
-    total_epoches = 11
+    total_epoches = 12
     train_batch_num = int(math.ceil(float(train_img_cnt) / batch_size))
     train_evaluation_step = 1000
-    save_epoch = 2
+    save_epoch = 1
     warm_up_epoch = 3
 
     # multi_scale_train = True

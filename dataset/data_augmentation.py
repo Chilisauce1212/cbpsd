@@ -33,8 +33,10 @@ def rotate_box(bb, cx, cy, h, w, rot_angle):
         v = [coord[0],coord[1],1]
         # Perform the actual rotation and return the image
         calculated = np.dot(M,v)
-        new_bb.append(int(calculated[0]))
-        new_bb.append(int(calculated[1]))
+        x = max(0, min(int(calculated[0]), w - 1))
+        y = max(0, min(int(calculated[1]), h - 1))
+        new_bb.append(x)
+        new_bb.append(y)
     return new_bb
 
 def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, cover=False):
@@ -73,78 +75,92 @@ def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, co
         else:
             new_box_list.append(new_bb)
 
-    if cover and new_box_list:
+    if type != 2 and cover and new_box_list :
         # 寻找最下方的框
-        bottom_box_index = max(range(len(new_box_list)), key=lambda i: max(new_box_list[i][1::2]))
-        bottom_box = new_box_list[bottom_box_index]
+        bottom_box = max(new_box_list, key=lambda box: max(box[2], box[4], box[6], box[8]))
 
         # 计算遮罩区域的坐标
-        left_top_corner_y = max(int(bottom_box[2]), int(bottom_box[8]))
-        right_bottom_corner_y = min(int(bottom_box[4]), int(bottom_box[6]))
+        sorted_y_coords = sorted([int(bottom_box[2]), int(bottom_box[4]), int(bottom_box[6]), int(bottom_box[8])])
+        left_top_corner_y = sorted_y_coords[1]
+        right_bottom_corner_y = sorted_y_coords[2]
+        if right_bottom_corner_y - left_top_corner_y < 2:
+            return 
         # 生成一个随机遮盖比例，范围在 1/3 到 2/3 之间
         cover_ratio = random.uniform(1/3, 2/3)
         cover_y = int(left_top_corner_y + cover_ratio * (right_bottom_corner_y - left_top_corner_y))
         # 在图像上绘制遮罩
         cv2.rectangle(image_rot, (0, cover_y), (width, height), (0, 0, 0), -1)
-
+        # print(jpg_file)
+        # print(new_box_list)
         # 计算遮罩后可见区域的四个角点
         new_bottom_box = [bottom_box[0]]
-        new_bottom_box.extend([bottom_box[1], bottom_box[2]])
+        box = bottom_box[1:]
         # 计算y=cover_y与第一和第二，第三和第四连线的交点
-        for i in range(1, 7, 4):
-            x1, y1 = bottom_box[i], bottom_box[i+1]
-            x2, y2 = bottom_box[i+2], bottom_box[i+3]
-            
-            intersect_x = x1 + (cover_y - y1) * (x2 - x1) / (y2 - y1)
-            new_bottom_box.extend([int(intersect_x), cover_y - 1])
+        for i in range(0, 8, 2):
+            x1, y1 = box[i], box[i + 1] if box[i + 1] != cover_y else cover_y - 1
+            x2, y2 = box[(i + 2) % 8], box[(i + 3) % 8] if box[(i + 3) % 8] != cover_y else cover_y - 1
+            if (y1 < cover_y < y2) or (y2 < cover_y < y1):
+                intersect_x = x1 + (cover_y - y1) * (x2 - x1) / (y2 - y1)
+                new_bottom_box.extend([int(intersect_x), cover_y -1])
+                # print(f"1 {x1}-{y1} {x2} {y2} -> {int(intersect_x)} {cover_y -1}")
+            elif (y2 <= cover_y and y1 <= cover_y):
+                new_bottom_box.extend([x1, y1])
+                new_bottom_box.extend([x2, y2])
+                # print(f"2 {x1}-{y1} {x2} {y2} -> {x1}-{y1} {x2} {y2}")
+
+
         
-        new_bottom_box.extend([bottom_box[7], bottom_box[8]])
         #将最下方的框坐标更新
         new_box_list.remove(bottom_box)
         new_box_list.append(new_bottom_box)
+        # print(f"cover_y:{cover_y}")
+        # print(new_box_list)
+        # print()
+
     write_data_to_our_txt(dst_txt, type, new_angle, new_box_list)
     cv2.imwrite(dst_jpg, image_rot)
-
-def run(data_path):
+    
+def run_single(data_path):
     image_path = os.path.join(data_path, "image")
     label_path = os.path.join(data_path, "label")
     jpg_files = sorted(os.listdir(image_path))
     txt_files = sorted(os.listdir(label_path))
 
     #单线程处理
-    # for jpg_file, txt_file in zip(jpg_files, txt_files):
-    #         src_image_file = os.path.join(image_path, jpg_file)
-    #         src_label_file = os.path.join(label_path, txt_file)
-    #         print(jpg_file)
-    #         for angle in range(-5, 6):
-    #             for flip in [True, False]:
-    #                 for cover in [True, False]:
-    #                     if angle == 0 and flip == False and cover == False:
-    #                         continue                
-    #                     file_suffix = ""
-    #                     if flip:
-    #                         file_suffix += "_flip"
-    #                     if cover:
-    #                         file_suffix += "_cover"
+    for jpg_file, txt_file in zip(jpg_files, txt_files):
+            src_image_file = os.path.join(image_path, jpg_file)
+            src_label_file = os.path.join(label_path, txt_file)
+            print(jpg_file)
+            for angle in range(-5, 6, 5):
+                for flip in [True, False]:
+                    for cover in [True, False]:
+                        if angle == 0 and flip == False and cover == False:
+                            continue                
+                        file_suffix = ""
+                        if flip:
+                            file_suffix += "_flip"
+                        if cover:
+                            file_suffix += "_cover"
 
-    #                     dst_jpg_file = jpg_file.replace(".jpg", "{}_{}.jpg".format(file_suffix, angle))
-    #                     dst_txt_file = txt_file.replace(".txt", "{}_{}.txt".format(file_suffix, angle))
-    #                     dst_image_file = os.path.join(image_path, dst_jpg_file)
-    #                     dst_label_file = os.path.join(label_path, dst_txt_file)
-    #                     try:
-    #                         data_augment(src_image_file, src_label_file,dst_image_file,dst_label_file,angle,flip,cover)
-    #                     except Exception as e:
-    #                         tb = traceback.format_exc()
-    #                         print(f"任务执行过程中发生异常: {e}\n{tb}")
-                        
+                        dst_jpg_file = jpg_file.replace(".jpg", "{}_{}.jpg".format(file_suffix, angle))
+                        dst_txt_file = txt_file.replace(".txt", "{}_{}.txt".format(file_suffix, angle))
+                        dst_image_file = os.path.join(image_path, dst_jpg_file)
+                        dst_label_file = os.path.join(label_path, dst_txt_file)
+                        data_augment(src_image_file, src_label_file,dst_image_file,dst_label_file,angle,flip,cover)
+
+def run_multiple(data_path,thread_num):
+    image_path = os.path.join(data_path, "image")
+    label_path = os.path.join(data_path, "label")
+    jpg_files = sorted(os.listdir(image_path))
+    txt_files = sorted(os.listdir(label_path))                        
     #多线程处理
-    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
         futures = []
         for jpg_file, txt_file in zip(jpg_files, txt_files):
             src_image_file = os.path.join(image_path, jpg_file)
             src_label_file = os.path.join(label_path, txt_file)
             print(jpg_file)
-            for angle in range(-5, 6):
+            for angle in range(-5, 6,5):
                 for flip in [True, False]:
                     for cover in [True, False]:
                         if angle == 0 and flip == False:
@@ -163,7 +179,6 @@ def run(data_path):
                         # 提交任务到线程池
                         future = executor.submit(data_augment, src_image_file, src_label_file, dst_image_file, dst_label_file, angle, flip, cover)
                         futures.append(future)
-
         # 等待所有任务完成
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -171,3 +186,7 @@ def run(data_path):
             except Exception as e:
                 tb = traceback.format_exc()
                 print(f"任务执行过程中发生异常: {e}\n{tb}")
+
+def run(data_path):
+    run_multiple(data_path, thread_num=12)
+    # run_single(data_path)
