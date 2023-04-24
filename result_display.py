@@ -1,10 +1,13 @@
 import cv2
 import numpy as np
+import argparse
+import os
 
 def parse_line(line):
     elements = line.strip().split(' ')
     img_id = elements[0]
     image_path = elements[1]
+    image_name = elements[1].split('/')[-1]
     bounding_boxes = []
     i = 2
     while i < len(elements):
@@ -13,7 +16,7 @@ def parse_line(line):
         points = [float(e) for e in elements[i+2:i+10]]
         bounding_boxes.append((type_of_box, confidence, points))
         i += 10
-    return img_id, image_path, bounding_boxes
+    return img_id, image_path, image_name, bounding_boxes
 
 
 
@@ -30,25 +33,37 @@ def draw_bounding_boxes(image, bounding_boxes):
         cv2.putText(image, f"{confidence:.2f}", (pts[0][0] + 30, pts[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color_confidence, 2)
 
 
-if __name__ == "__main__": 
+def create_directory_if_not_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Draw bounding boxes on images.")
+    parser.add_argument('--save_path', type=str, help="Path to save the output images.", default=None)
+    args = parser.parse_args()
+
+    save_path = args.save_path
+    if save_path:
+        create_directory_if_not_exists(save_path)
+
     with open("result/result.txt", "r") as file:
         lines = file.readlines()
 
     for line in lines:
-        img_id, image_path, bounding_boxes = parse_line(line)
+        img_id, image_path, image_name, bounding_boxes = parse_line(line)
         image = cv2.imread(image_path)
         draw_bounding_boxes(image, bounding_boxes)
 
-        # 保存图像
-        # output_path = f"output/{img_id}.jpg"
-        # cv2.imwrite(output_path, image)
-
-        # 显示图像
-        cv2.imshow(f"Image {img_id}", image)
-        key = cv2.waitKey(0) & 0xFF
-        cv2.destroyAllWindows()
-        if key == ord('q'):
-            print("程序已被用户终止。")
-            break
+        if save_path:
+            output_path = f"{save_path}/{image_name}_r.jpg"
+            cv2.imwrite(output_path, image)
+        else:
+            # 显示图像
+            cv2.imshow(f"Image {img_id}", image)
+            key = cv2.waitKey(0) & 0xFF
+            cv2.destroyAllWindows()
+            if key == ord('q'):
+                print("程序已被用户终止。")
+                break
 
 

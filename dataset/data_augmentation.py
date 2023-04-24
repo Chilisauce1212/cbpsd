@@ -43,39 +43,23 @@ def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, co
     image = cv2.imread(jpg_file)
     height, width, channel = image.shape
 
-    if flip:
-        image = cv2.flip(image, 0)
-
+    
     matrix = cv2.getRotationMatrix2D((width / 2, height / 2), -rot_angle, 1)
     image_rot = cv2.warpAffine(image, matrix, (width, height), borderMode=cv2.BORDER_CONSTANT, borderValue=[128, 128, 128])
 
     type, angle, box_list = get_data_from_our_txt(txt_file, int, '\t')
-    if type == 3:
-        new_angle = 0
-    else:
-        if flip:
-            new_angle = -angle + rot_angle
-        else:
-            new_angle = angle + rot_angle
-    if new_angle < -180:
-        new_angle += 360
-    elif new_angle > 180:
-        new_angle -= 360
+    
     new_box_list = []
 
-    for p in box_list:
-        if flip:
-            bb = [[int(p[3]), height -1 - int(p[4])], [int(p[1]), height - 1 - int(p[2])], [int(p[7]), height-1 - int(p[8])], [int(p[5]), height-1 - int(p[6])]]
-        else:
+    if type != 3:
+        for p in box_list:
             bb = [[int(p[1]), int(p[2])], [int(p[3]), int(p[4])], [int(p[5]), int(p[6])], [int(p[7]), int(p[8])]]
-        new_bb = rotate_box(bb, _WIDTH/2, _HEIGHT/2, _HEIGHT, _WIDTH, -rot_angle)
-        new_bb.insert(0, int(p[0]))
-        if flip:
-            new_box_list.insert(0, new_bb)
-        else:
+            new_bb = rotate_box(bb, _WIDTH/2, _HEIGHT/2, _HEIGHT, _WIDTH, -rot_angle)
+            new_bb.insert(0, int(p[0]))
             new_box_list.append(new_bb)
 
-    if type != 2 and cover and new_box_list :
+    #遮盖处理
+    if abs(angle) < 20 and type != 2 and cover and new_box_list:
         # 寻找最下方的框
         bottom_box = max(new_box_list, key=lambda box: max(box[2], box[4], box[6], box[8]))
 
@@ -85,8 +69,8 @@ def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, co
         right_bottom_corner_y = sorted_y_coords[2]
         if right_bottom_corner_y - left_top_corner_y < 2:
             return 
-        # 生成一个随机遮盖比例，范围在 1/3 到 2/3 之间
-        cover_ratio = random.uniform(1/3, 2/3)
+        # 生成一个随机遮盖比例，范围在 1/2 到 2/3 之间
+        cover_ratio = random.uniform(1/2, 2/3)
         cover_y = int(left_top_corner_y + cover_ratio * (right_bottom_corner_y - left_top_corner_y))
         # 在图像上绘制遮罩
         cv2.rectangle(image_rot, (0, cover_y), (width, height), (0, 0, 0), -1)
@@ -117,6 +101,31 @@ def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, co
         # print(new_box_list)
         # print()
 
+    #翻转处理
+    if flip:
+        image_rot = cv2.flip(image_rot, 0)
+
+    if type == 3:
+        new_angle = 0
+    else:
+        if flip:
+            new_angle = -angle + rot_angle
+        else:
+            new_angle = angle + rot_angle
+    if new_angle < -180:
+        new_angle += 360
+    elif new_angle > 180:
+        new_angle -= 360
+
+    
+    flip_box_list = []
+    if type != 3 and flip:
+        for p in new_box_list:
+            bb = [int(p[3]), height -1 - int(p[4]), int(p[1]), height - 1 - int(p[2]), int(p[7]), height-1 - int(p[8]), int(p[5]), height-1 - int(p[6])]
+            bb.insert(0, int(p[0]))
+            flip_box_list.insert(0, bb)
+        new_box_list = flip_box_list
+    # print(new_box_list)
     write_data_to_our_txt(dst_txt, type, new_angle, new_box_list)
     cv2.imwrite(dst_jpg, image_rot)
     

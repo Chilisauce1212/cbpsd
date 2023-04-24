@@ -45,7 +45,7 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
         restore_exclude = ['yolov3/yolov3_head/Conv_14', 'yolov3/yolov3_head/Conv_6', 'yolov3/yolov3_head/Conv_22']
         update_part = None
 
-    total_epoches = 12
+    total_epoches = 11
     train_batch_num = int(math.ceil(float(train_img_cnt) / batch_size))
     train_evaluation_step = 1000
     save_epoch = 1

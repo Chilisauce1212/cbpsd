@@ -32,10 +32,10 @@ args = parser.parse_args()
 
 pcr_train.evaluate(os.path.join(args.data_path, "test"), args.pcr_test_weight)
 
-psd_test.evaluate(args.psd_test_weight_type0, "result/result_pcr_type_0.txt", "result2.1/result_psd_type_0.txt")
-psd_test.evaluate(args.psd_test_weight_type1, "result/result_pcr_type_1.txt", "result2.1/result_psd_type_1.txt")
-psd_test.evaluate(args.psd_test_weight_type2, "result/result_pcr_type_2.txt", "result2.1/result_psd_type_2.txt")
+psd_test.evaluate(args.psd_test_weight_type0, "result/result_pcr_type_0.txt", "result/result_psd_type_0.txt")
+psd_test.evaluate(args.psd_test_weight_type1, "result/result_pcr_type_1.txt", "result/result_psd_type_1.txt")
+psd_test.evaluate(args.psd_test_weight_type2, "result/result_pcr_type_2.txt", "result/result_psd_type_2.txt")
 
-result_files = ["result2.1/result_psd_type_0.txt","result2.1/result_psd_type_1.txt","result2.1/result_psd_type_2.txt"]
-merge_result.merge_result(os.path.join(args.data_path, "test.txt"), result_files, "result2.1/result.txt")
-eval_utils.eval_result_file(os.path.join(args.data_path, "test.txt"), "result2.1/result.txt", args.threshold_score)
+result_files = ["result/result_psd_type_0.txt","result/result_psd_type_1.txt","result/result_psd_type_2.txt"]
+merge_result.merge_result(os.path.join(args.data_path, "test.txt"), result_files, "result/result.txt")
+eval_utils.eval_result_file(os.path.join(args.data_path, "test.txt"), "result/result.txt", args.threshold_score)
