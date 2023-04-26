@@ -60,6 +60,42 @@ def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, co
 
     #遮盖处理
     if abs(angle) < 20 and type != 2 and cover and new_box_list:
+        # 框的个数大于1时才遮盖最上框
+        if len(new_box_list) > 1:
+            # 寻找最上方的框
+            top_box = min(new_box_list, key=lambda box: min(box[2], box[4], box[6], box[8]))
+
+            # 计算遮罩区域的坐标
+            sorted_y_coords_top = sorted([int(top_box[2]), int(top_box[4]), int(top_box[6]), int(top_box[8])])
+            left_top_corner_y_top = sorted_y_coords_top[0]
+            right_bottom_corner_y_top = sorted_y_coords_top[1]
+            if right_bottom_corner_y_top - left_top_corner_y_top < 2:
+                return
+            # 生成一个随机遮盖比例，范围在 1/2 到 2/3 之间
+            cover_ratio_top = random.uniform(1/2, 2/3)
+            cover_y_top = int(right_bottom_corner_y_top - cover_ratio_top * (right_bottom_corner_y_top - left_top_corner_y_top))
+            # 在图像上绘制遮罩
+            cv2.rectangle(image_rot, (0, 0), (width, cover_y_top), (0, 0, 0), -1)
+
+            # 计算遮罩后可见区域的四个角点
+            new_top_box = [top_box[0]]
+            box_top = top_box[1:]
+            # 计算y=cover_y_top与第一和第二，第三和第四连线的交点
+            for i in range(0, 8, 2):
+                x1, y1 = box_top[i], box_top[i + 1] if box_top[i + 1] != cover_y_top else cover_y_top + 1
+                x2, y2 = box_top[(i + 2) % 8], box_top[(i + 3) % 8] if box_top[(i + 3) % 8] != cover_y_top else cover_y_top + 1
+                if (y1 > cover_y_top > y2) or (y2 > cover_y_top > y1):
+                    intersect_x = x1 + (cover_y_top - y1) * (x2 - x1) / (y2 - y1)
+                    new_top_box.extend([int(intersect_x), cover_y_top + 1])
+
+                elif (y2 >= cover_y_top and y1 >= cover_y_top):
+                    new_top_box.extend([x1, y1])
+                    new_top_box.extend([x2, y2])
+
+            #将最上方的框坐标更新
+            new_box_list.remove(top_box)
+            new_box_list.insert(0, new_top_box)
+
         # 寻找最下方的框
         bottom_box = max(new_box_list, key=lambda box: max(box[2], box[4], box[6], box[8]))
 
