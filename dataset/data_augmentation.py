@@ -67,8 +67,8 @@ def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, co
 
             # 计算遮罩区域的坐标
             sorted_y_coords_top = sorted([int(top_box[2]), int(top_box[4]), int(top_box[6]), int(top_box[8])])
-            left_top_corner_y_top = sorted_y_coords_top[0]
-            right_bottom_corner_y_top = sorted_y_coords_top[1]
+            left_top_corner_y_top = sorted_y_coords_top[1]
+            right_bottom_corner_y_top = sorted_y_coords_top[2]
             if right_bottom_corner_y_top - left_top_corner_y_top < 2:
                 return
             # 生成一个随机遮盖比例，范围在 1/2 到 2/3 之间
@@ -86,9 +86,10 @@ def data_augment(jpg_file, txt_file, dst_jpg, dst_txt, rot_angle, flip=False, co
                 x2, y2 = box_top[(i + 2) % 8], box_top[(i + 3) % 8] if box_top[(i + 3) % 8] != cover_y_top else cover_y_top + 1
                 if (y1 > cover_y_top > y2) or (y2 > cover_y_top > y1):
                     intersect_x = x1 + (cover_y_top - y1) * (x2 - x1) / (y2 - y1)
+                    # print(f"1 {x1}-{y1} {x2} {y2} -> {int(intersect_x)} {cover_y_top -1}")
                     new_top_box.extend([int(intersect_x), cover_y_top + 1])
-
                 elif (y2 >= cover_y_top and y1 >= cover_y_top):
+                    # print(f"2 {x1}-{y1} {x2} {y2} -> {x1}-{y1} {x2} {y2}")
                     new_top_box.extend([x1, y1])
                     new_top_box.extend([x2, y2])
 
