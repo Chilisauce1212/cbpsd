@@ -208,14 +208,14 @@ def run_multiple(data_path,thread_num):
             print(jpg_file)
             for angle in range(-5, 6,5):
                 for flip in [True, False]:
-                    for cover in [True, False]:
+                    # for cover in [True, False]:
                         if angle == 0 and flip == False:
                             continue                
                         file_suffix = ""
                         if flip:
                             file_suffix += "_flip"
-                        if cover:
-                            file_suffix += "_cover"
+                        # if cover:
+                        #     file_suffix += "_cover"
 
                         dst_jpg_file = jpg_file.replace(".jpg", "{}_{}.jpg".format(file_suffix, angle))
                         dst_txt_file = txt_file.replace(".txt", "{}_{}.txt".format(file_suffix, angle))
@@ -223,7 +223,7 @@ def run_multiple(data_path,thread_num):
                         dst_label_file = os.path.join(label_path, dst_txt_file)
 
                         # 提交任务到线程池
-                        future = executor.submit(data_augment, src_image_file, src_label_file, dst_image_file, dst_label_file, angle, flip, cover)
+                        future = executor.submit(data_augment, src_image_file, src_label_file, dst_image_file, dst_label_file, angle, flip, False)
                         futures.append(future)
         # 等待所有任务完成
         for future in concurrent.futures.as_completed(futures):
@@ -234,5 +234,5 @@ def run_multiple(data_path,thread_num):
                 print(f"任务执行过程中发生异常: {e}\n{tb}")
 
 def run(data_path):
-    run_multiple(data_path, thread_num=12)
+    run_multiple(data_path, thread_num=16)
     # run_single(data_path)

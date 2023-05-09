@@ -9,6 +9,7 @@ from parking_slot_detector.utils import eval_utils as eval_utils
 #################
 # ArgumentParser
 #################
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 parser = argparse.ArgumentParser(description="context-based parking slot detector")
 
 parser.add_argument("--data_path", type=str, default="E:/PIL-park/",

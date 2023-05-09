@@ -33,8 +33,7 @@ def find_latest_checkpoint(directory):
     if max_step_checkpoint:
         return str(max_step_checkpoint)
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-restore = 0
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 ################
 # ArgumentParser
 #################
@@ -48,26 +47,15 @@ args = parser.parse_args()
 # Train Parking Context Recognizer
 # pcr_train.train(train_path=args.data_path)
 
-if restore:
-    restore_path = find_latest_checkpoint("weight_psd")
-    restore_path0 = find_latest_checkpoint("weight_psd/type_0")
-    restore_path1 = find_latest_checkpoint("weight_psd/type_1")
-    restore_path2 = find_latest_checkpoint("weight_psd/type_2")
-else:
-    restore_path = "pre_weight/yolov3.ckpt"
-    restore_path0 = find_latest_checkpoint("weight_psd")
-    restore_path1 = find_latest_checkpoint("weight_psd")
-    restore_path2 = find_latest_checkpoint("weight_psd")
-
 # Train Parking Slot Detector
-# trained_path = psd_train.train(args.data_path, restore_path, 'weight_psd')
-psd_train.train(os.path.join(args.data_path, "t0"), restore_path0, 'weight_psd/type_0', fine_tune=True)
-psd_train.train(os.path.join(args.data_path, "t1"), restore_path1, 'weight_psd/type_1', fine_tune=True)
-psd_train.train(os.path.join(args.data_path, "t2"), restore_path2, 'weight_psd/type_2', fine_tune=True)
+# trained_path = psd_train.train(args.data_path, 'pre_weight/yolov3.ckpt', 'weight_psd')
+# psd_train.train(os.path.join(args.data_path, "t0"), trained_path, 'weight_psd/type_0', fine_tune=True)
+# psd_train.train(os.path.join(args.data_path, "t1"), trained_path, 'weight_psd/type_1', fine_tune=True)
+# psd_train.train(os.path.join(args.data_path, "t2"), trained_path, 'weight_psd/type_2', fine_tune=True)
 
 # # Train Parking Slot Detector
 # psd_train.train(args.data_path, find_latest_checkpoint("weight_psd"), 'weight_psd')
-# trained_path = psd_train.train(args.data_path, 'weight_psd/20230508_1646/model-epoch_10_step_26828_loss_7.3457_lr_1e-05', 'weight_psd')
-# psd_train.train(os.path.join(args.data_path, "t0"), find_latest_checkpoint("weight_psd/type_0"), 'weight_psd/type_0', fine_tune=True)
-# psd_train.train(os.path.join(args.data_path, "t1"), find_latest_checkpoint("weight_psd/type_1"), 'weight_psd/type_1', fine_tune=True)
-# psd_train.train(os.path.join(args.data_path, "t2"), find_latest_checkpoint("weight_psd/type_2"), 'weight_psd/type_2', fine_tune=True)
+# trained_path = psd_train.train(args.data_path, 'weight_psd/20230507_1648/model-epoch_10_step_26828_loss_8.6149_lr_1e-05', 'weight_psd')
+# psd_train.train(os.path.join(args.data_path, "t0"), 'weight_psd/type_0/20230508_0031/model-epoch_10_step_9250_loss_2.4867_lr_1e-05', 'weight_psd/type_0', fine_tune=True)
+psd_train.train(os.path.join(args.data_path, "t1"), 'weight_psd/type_1/20230508_0604/model-epoch_3_step_5495_loss_7.6057_lr_1e-05', 'weight_psd/type_1', fine_tune=True)
+psd_train.train(os.path.join(args.data_path, "t2"), 'weight_psd/type_2/20230508_0358/model-epoch_10_step_2474_loss_13.2056_lr_1e-05', 'weight_psd/type_2', fine_tune=True)

@@ -35,11 +35,19 @@ for image_file, label_file in zip(image_files, label_files):
     draw_boxes(image, labels)
     angle = labels[0][0]
     # 显示图像
-    cv2.imshow('Image with Boxes', image)
-    print(f"angle: {angle}")
-    # 按空格键读取下一个，按'q'键退出
-    key = cv2.waitKey(0) & 0xFF
-    if key == ord('q'):
-        break
+    # cv2.imshow('Image with Boxes', image)
+    # 确保文件夹存在，如果不存在，则创建一个
+    img_folder = 'tmp'
+    if not os.path.exists(img_folder):
+        os.makedirs(img_folder)
 
-cv2.destroyAllWindows()
+    # 保存图像到指定的文件夹
+    output_file_path = os.path.join(img_folder, f'{image_file}')
+    cv2.imwrite(output_file_path, image)
+    # print(f"angle: {angle}")
+#     # 按空格键读取下一个，按'q'键退出
+#     key = cv2.waitKey(0) & 0xFF
+#     if key == ord('q'):
+#         break
+
+# cv2.destroyAllWindows()

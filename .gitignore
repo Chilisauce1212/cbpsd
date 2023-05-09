@@ -1,4 +1,5 @@
 *.jpg
 *.zip
 *.tar.gz
+*.log
 !.gitignore

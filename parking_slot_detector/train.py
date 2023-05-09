@@ -5,6 +5,7 @@ import math
 # import logging
 import time
 import os
+import re
 from tqdm import trange
 
 # import args
@@ -18,6 +19,18 @@ from parking_slot_detector.utils.nms_utils import gpu_nms
 
 from parking_slot_detector.model import yolov3
 
+def extract_epoch_from_filename(filename):
+    pattern = r"epoch_(\d+)"
+    match = re.search(pattern, filename)
+    if match:
+        return int(match.group(1))
+    else:
+        return None
+
+def append_info_to_file(info, weight_folder):
+    file_path = os.path.join(weight_folder, "info.txt")
+    with open(file_path, "a") as file:
+        file.write(info + "\n")
 
 def train(data_path, restore_path, save_dir, fine_tune = False):
     train_file = os.path.join(data_path, 'train.txt')
@@ -31,13 +44,13 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
     val_img_cnt = len(open(val_file, 'r').readlines())
 
     if fine_tune:
-        batch_size = 8
+        batch_size = 22
         learning_rate_init = 1e-5
         restore_include = None
         restore_exclude = None
         update_part = ['yolov3/yolov3_head']
     else:
-        batch_size = 8
+        batch_size = 22
         learning_rate_init = 1e-4
         pw_boundaries = [6., 8.]  # epoch based boundaries
         pw_values = [learning_rate_init, 3e-5, 1e-5]
@@ -49,7 +62,15 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
     train_batch_num = int(math.ceil(float(train_img_cnt) / batch_size))
     train_evaluation_step = 1000
     save_epoch = 1
+    previous_epoch = extract_epoch_from_filename(restore_path)
     warm_up_epoch = 3
+    if previous_epoch is not None:
+        initial_epoch = previous_epoch + 1
+        warmup_epoch = 0
+    else:
+        initial_epoch = 0
+    
+    
 
     # multi_scale_train = True
     use_mix_up = True
@@ -189,7 +210,7 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
         best_mAP = -np.Inf
 
         for epoch in range(total_epoches):
-
+            now_epoch = epoch + initial_epoch
             sess.run(train_init_op)
             loss_total, loss_conf, loss_class, loss_quad = AverageMeter(), AverageMeter(), AverageMeter(), AverageMeter()
 
@@ -212,7 +233,7 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
                     recall, precision = evaluate_on_gpu(sess, gpu_nms_op, pred_quads_flag, pred_scores_flag, __y_pred, __y_true, class_num, THRESHOLD_NMS)
 
                     info = "Epoch: {}, global_step: {} | loss: total: {:.2f}, conf: {:.2f}, class: {:.2f}, quad: {:.2f} | ".format(
-                            epoch, int(__global_step), loss_total.average, loss_conf.average, loss_class.average, loss_quad.average)
+                            now_epoch, int(__global_step), loss_total.average, loss_conf.average, loss_class.average, loss_quad.average)
                     info += 'Last batch: rec: {:.3f}, prec: {:.3f} | lr: {:.5g}'.format(recall, precision, __lr)
                     print(info)
                     # logging.info(info)
@@ -226,12 +247,12 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
                             'Gradient exploded! Please train again and you may need modify some parameters.')
 
             # NOTE: this is just demo. You can set the conditions when to save the weights.
-            if epoch % save_epoch == 0 and epoch > 0:
+            if now_epoch % save_epoch == 0 and now_epoch > 0:
                 # if loss_total.average <= 2.:
-                saver_to_save.save(sess, weight_folder + '/model-epoch_{}_step_{}_loss_{:.4f}_lr_{:.5g}'.format(epoch, int(__global_step), loss_total.average, __lr))
+                saver_to_save.save(sess, weight_folder + '/model-epoch_{}_step_{}_loss_{:.4f}_lr_{:.5g}'.format(now_epoch, int(__global_step), loss_total.average, __lr))
 
             # switch to validation dataset for evaluation
-            if epoch % save_epoch == 0 and epoch >= warm_up_epoch:
+            if now_epoch % save_epoch == 0 and epoch >= warm_up_epoch:
                 sess.run(val_init_op)
 
                 val_loss_total, val_loss_conf, val_loss_class, val_loss_quad = \
@@ -256,7 +277,7 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
                 # gt_dict = parse_gt_rec(val_file, [INPUT_WIDTH, INPUT_HEIGHT], letterbox_resize)
                 gt_dict = parse_gt_quadrangle(val_file, [INPUT_WIDTH, INPUT_HEIGHT], letterbox_resize)
 
-                info = '======> Epoch: {}, global_step: {}, lr: {:.6g} <======\n'.format(epoch, __global_step, __lr)
+                info = '======> Epoch: {}, global_step: {}, lr: {:.6g} <======\n'.format(now_epoch, __global_step, __lr)
 
                 # for ii in range(class_num):
                 # for ii in range(1):
@@ -272,6 +293,7 @@ def train(data_path, restore_path, save_dir, fine_tune = False):
                 info += 'EVAL: loss: total: {:.2f}, conf: {:.2f}, class: {:.2f}, quad: {:.2f}\n'.format(
                     val_loss_total.average, val_loss_conf.average, val_loss_class.average, val_loss_quad.average)
                 print(info)
+                append_info_to_file(info, weight_folder)
                 # logging.info(info)
 
     print("weight_folder = ", weight_folder)
